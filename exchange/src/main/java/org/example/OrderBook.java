@@ -95,5 +95,48 @@ public class OrderBook {
         return ordersAtPrice.stream().mapToDouble(Order::remaining).sum();
     }
 
+    public double vwapBook() {
+        double notional = 0.0;
+        double volume   = 0.0;
+
+        for (Deque<Order> q : bids.values()) {
+            for (Order o : q) {
+                notional += o.price() * o.remaining();
+                volume   += o.remaining();
+            }
+        }
+        for (Deque<Order> q : asks.values()) {
+            for (Order o : q) {
+                notional += o.price() * o.remaining();
+                volume   += o.remaining();
+            }
+        }
+
+        if (volume == 0.0) {
+            throw new IllegalStateException("Cannot compute VWAP on empty book");
+        }
+        return notional / volume;
+    }
+
+    public double vwapSide(Direction side) {
+        double notional = 0.0;
+        double volume   = 0.0;
+
+        var book = (side == Direction.Buy) ? bids : asks;
+
+        for (Deque<Order> q : book.values()) {
+            for (Order o : q) {
+                notional += o.price() * o.remaining();
+                volume   += o.remaining();
+            }
+        }
+
+        if (volume == 0.0) {
+            throw new IllegalStateException("Cannot compute VWAP on empty " + side + " side");
+        }
+        return notional / volume;
+    }
+
+
     public record BookLevel(double price, double totalQuantity) {}
 }
