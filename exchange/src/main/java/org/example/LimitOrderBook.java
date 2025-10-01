@@ -54,7 +54,14 @@ public class LimitOrderBook implements Book {
     public LimitOrderBook(Collection<LimitOrder> orders) {
         this();
         if (orders != null) {
-            orders.forEach(this::placeOrder);
+            for (LimitOrder o : orders) {
+                ExecutionReport report = placeOrder(o);
+                if (!report.trades().isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "Cannot initialise Order Book with crossing orders. Offending order: " + o
+                    );
+                }
+            }
         }
     }
 
@@ -145,9 +152,8 @@ public class LimitOrderBook implements Book {
         return notional / volume;
     }
 
-
     @Override
-    public List<Trade> placeOrder(Order order) {
+    public ExecutionReport placeOrder(Order order) {
         if (!(order instanceof LimitOrder lo)) {
             throw new IllegalArgumentException("LimitOrderBook only accepts LimitOrders");
         }
@@ -214,7 +220,15 @@ public class LimitOrderBook implements Book {
             addOrder(lo);
         }
 
-        return trades;
+        if (trades.isEmpty()) {
+            return new ExecutionReport(trades, 0.0, 0.0);
+        }
+
+        double filledQty = trades.stream().mapToDouble(Trade::quantity).sum();
+        double notional  = trades.stream().mapToDouble(t -> t.price() * t.quantity()).sum();
+        double vwap = (filledQty > 0) ? notional / filledQty : 0.0;
+
+        return new ExecutionReport(trades, filledQty, vwap);
     }
 
 
