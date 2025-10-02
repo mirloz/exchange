@@ -88,6 +88,10 @@ public class LimitOrderBook implements Book {
         return asks.firstKey();
     }
 
+    public double getMid() {
+        return (getBestBid() + getBestAsk()) / 2.0;
+    }
+
     public Deque<LimitOrder> getOrdersAtPrice(Double price) {
         var q = bids.get(price);
         if (q == null) q = asks.get(price);
@@ -154,9 +158,10 @@ public class LimitOrderBook implements Book {
 
     @Override
     public ExecutionReport placeOrder(Order order) {
-        if (!(order instanceof LimitOrder lo)) {
+        if (!(order instanceof LimitOrder)) {
             throw new IllegalArgumentException("LimitOrderBook only accepts LimitOrders");
         }
+        LimitOrder lo = (LimitOrder) order;
 
         List<Trade> trades = new ArrayList<>();
 
@@ -226,7 +231,7 @@ public class LimitOrderBook implements Book {
 
         double filledQty = trades.stream().mapToDouble(Trade::quantity).sum();
         double notional  = trades.stream().mapToDouble(t -> t.price() * t.quantity()).sum();
-        double vwap = (filledQty > 0) ? notional / filledQty : 0.0;
+        double vwap      = filledQty > 0 ? notional / filledQty : 0.0;
 
         return new ExecutionReport(trades, filledQty, vwap);
     }
